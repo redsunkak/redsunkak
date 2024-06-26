@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퀴즈 이미지 생성기</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        .input-section {
+            width: 300px;
+        }
+        .preview-section {
+            width: 360px;
+            height: 640px;
+        }
+        #quizPreview {
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        input, textarea {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        #backgroundPreview {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            object-fit: cover;
+            z-index: 0;
+            opacity: 0.2;
+        }
+        .content {
+            position: relative;
+            z-index: 1;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+        }
+        .question, .options div {
+            color: white;
+            font-weight: bold;
+            text-shadow: 
+                -2px -2px 0 #000,
+                2px -2px 0 #000,
+                -2px 2px 0 #000,
+                2px 2px 0 #000,
+                0 3px 0 #000,
+                3px 0 0 #000,
+                0 -3px 0 #000,
+                -3px 0 0 #000;
+        }
+        .question {
+            font-size: 28px;
+            margin-bottom: 60px;
+        }
+        .options {
+            font-size: 22px;
+        }
+        .options div {
+            margin-bottom: 20px;
+        }
+        .correct-answer {
+            color: #FF0000 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="input-section">
+            <h2>퀴즈 정보 입력</h2>
+            <input type="text" id="question" placeholder="질문" required>
+            <textarea id="options" rows="4" placeholder="보기 (줄바꿈으로 구분)" required></textarea>
+            <input type="number" id="answer" placeholder="정답 번호" required>
+            <input type="file" id="backgroundImage" accept="image/*" required>
+            <button onclick="generateQuizImages()">이미지 생성</button>
+        </div>
+        <div class="preview-section">
+            <div id="quizPreview">
+                <img id="backgroundPreview" src="" alt="배경">
+                <div class="content">
+                    <div class="question"></div>
+                    <div class="options"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function generateQuizImages() {
+            const question = document.getElementById('question').value;
+            const options = document.getElementById('options').value.split('\n');
+            const answer = parseInt(document.getElementById('answer').value);
+            const backgroundImage = document.getElementById('backgroundImage').files[0];
+
+            if (question && options.length > 0 && answer && backgroundImage) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('backgroundPreview').src = e.target.result;
+                    updatePreview(question, options, answer, false);
+                    setTimeout(() => {
+                        html2canvas(document.getElementById('quizPreview')).then(canvas => {
+                            const link = document.createElement('a');
+                            link.download = 'quiz_image_question.png';
+                            link.href = canvas.toDataURL();
+                            link.click();
+
+                            // 정답이 표시된 두 번째 이미지 생성
+                            updatePreview(question, options, answer, true);
+                            setTimeout(() => {
+                                html2canvas(document.getElementById('quizPreview')).then(canvas => {
+                                    const link = document.createElement('a');
+                                    link.download = 'quiz_image_answer.png';
+                                    link.href = canvas.toDataURL();
+                                    link.click();
+                                });
+                            }, 500);
+                        });
+                    }, 500);
+                }
+                reader.readAsDataURL(backgroundImage);
+            } else {
+                alert('모든 필드를 채워주세요.');
+            }
+        }
+
+        function updatePreview(question, options, answer, showAnswer) {
+            document.querySelector('#quizPreview .question').textContent = question;
+            document.querySelector('#quizPreview .options').innerHTML = options.map((opt, i) => 
+                `<div class="${showAnswer && i + 1 === answer ? 'correct-answer' : ''}">${i + 1}. ${opt}</div>`
+            ).join('');
+        }
+
+        // 입력 필드의 변경을 감지하여 프리뷰 업데이트
+        document.getElementById('question').addEventListener('input', updatePreviewFromInputs);
+        document.getElementById('options').addEventListener('input', updatePreviewFromInputs);
+        document.getElementById('answer').addEventListener('input', updatePreviewFromInputs);
+        document.getElementById('backgroundImage').addEventListener('change', updateBackgroundPreview);
+
+        function updatePreviewFromInputs() {
+            const question = document.getElementById('question').value;
+            const options = document.getElementById('options').value.split('\n');
+            const answer = parseInt(document.getElementById('answer').value);
+            updatePreview(question, options, answer, false);
+        }
+
+        function updateBackgroundPreview() {
+            const backgroundImage = document.getElementById('backgroundImage').files[0];
+            if (backgroundImage) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('backgroundPreview').src = e.target.result;
+                }
+                reader.readAsDataURL(backgroundImage);
+            }
+        }
+
+        // 초기 프리뷰 업데이트
+        updatePreviewFromInputs();
+    </script>
+</body>
+</html>
